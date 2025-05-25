@@ -93,8 +93,7 @@ class ControllerNode : public rclcpp::Node {
   // Desired state
   Eigen::Vector3d xd; // desired position of the UAV's c.o.m. in the world frame
   Eigen::Vector3d vd; // desired velocity of the UAV's c.o.m. in the world frame
-  Eigen::Vector3d
-      ad;      // desired acceleration of the UAV's c.o.m. in the world frame
+  Eigen::Vector3d ad;      // desired acceleration of the UAV's c.o.m. in the world frame
   double yawd; // desired yaw angle
 
   int64_t hz; // frequency of the main control loop
@@ -180,7 +179,11 @@ public:
     //
     // Hint: use "v << vx, vy, vz;" to fill in a vector with Eigen.
     //
-        des_state.Twist.linear
+    //xd = des_state.transforms.
+    vd = des_state.velocities.linear
+    ad = des_state.accelerations.linear
+    //v << vx, vy, vz;
+      
     // this is here to surpress an "unused variable compiler warning"
     // you can remove it when you start writing your answer
     des_state == des_state;
@@ -192,7 +195,8 @@ public:
     //  Hints:
     //    - look into the functions tf2::getYaw(...) and tf2::fromMsg
     //
-
+    transform = tf2::fromMsg(des_state.transforms)
+    yawd = tf2::getYaw(transform.quaternion)
     //
     // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
     //                                 end part 3
@@ -210,7 +214,7 @@ public:
     //  CAVEAT: cur_state.twist.twist.angular is in the world frame, while omega
     //          needs to be in the body frame!
     //
-
+    
     // this is here to surpress an "unused variable compiler warning"
     // you can remove it when you start writing your answer
     cur_state == cur_state;
