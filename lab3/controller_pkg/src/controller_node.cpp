@@ -55,6 +55,14 @@ class ControllerNode : public rclcpp::Node {
   //   3. a timer for your main control loop
   //
   // ~~~~ begin solution
+  
+  //Node class calls create_subscription as opposed to constructor to creates subscription 
+  rclcpp::TimerBase::SharedPtr timer_;
+
+  rclcpp::Publisher<mav_msgs::msg::Actuators>::SharedPtr speed_cmd_;
+
+  rclcpp::Subscription<trajectory_msgs::msg::MultiDOFJointTrajectoryPoint>::SharedPtr desired_state_
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr current_state_
 
   // ~~~~ end solution
   // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
@@ -124,6 +132,17 @@ public:
     //  - make sure you start your timer with reset()
     //
     // ~~~~ begin solution
+    
+    desired_state_ = this->create_subscription<trajectory_msgs::msg::MultiDOFJointTrajectoryPoint>(
+        "desired_state", 10, std::bind(&ControllerNode::onDesiredState, this, _1));
+    
+    current_state_ = this->create_subscription<nav_msgs::msg::Odometry>(
+          "current_state", 10, std::bind(&ControllerNode::onCurrentState, this, _1));
+    
+    timer_ = this->create_wall_timer(1/hz, std::bind(&ControllerNode::controlLoop(), this));
+    
+    //TODO: Figure out how to start with reset()
+      
 
     // ~~~~ end solution
     // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
@@ -161,7 +180,7 @@ public:
     //
     // Hint: use "v << vx, vy, vz;" to fill in a vector with Eigen.
     //
-
+        des_state.Twist.linear
     // this is here to surpress an "unused variable compiler warning"
     // you can remove it when you start writing your answer
     des_state == des_state;
