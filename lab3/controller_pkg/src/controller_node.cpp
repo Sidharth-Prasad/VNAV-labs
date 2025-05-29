@@ -180,13 +180,25 @@ public:
     // Hint: use "v << vx, vy, vz;" to fill in a vector with Eigen.
     //
     //xd = des_state.transforms.
-    vd = des_state.velocities.linear
-    ad = des_state.accelerations.linear
+    xx = des_state.transforms[0].translation;
+    xy = des_state.transforms[1].translation;
+    xz = des_state.transforms[2].translation;
+    xd << xx, xy, xz;
+    
+    vx = des_state.velocities[0].linear;
+    vy = des_state.velocities[1].linear;
+    vz = des_state.velocities[2].linear;
+    vd << vx, vy, vz;
+      
+    ax = des_state.acceleration[0].linear;
+    ay = des_state.acceleration[1].linear;
+    az = des_state.acceleration[2].linear;
+    ad << ax, ay, az;
+    
     //v << vx, vy, vz;
       
     // this is here to surpress an "unused variable compiler warning"
     // you can remove it when you start writing your answer
-    des_state == des_state;
 
     //
     // 3.2 Extract the yaw component from the quaternion in the incoming ROS
@@ -195,8 +207,8 @@ public:
     //  Hints:
     //    - look into the functions tf2::getYaw(...) and tf2::fromMsg
     //
-    transform = tf2::fromMsg(des_state.transforms)
-    yawd = tf2::getYaw(transform.quaternion)
+    transform = tf2::fromMsg(des_state.transforms.rotation);
+    yawd = tf2::getYaw(transform);
     //
     // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
     //                                 end part 3
@@ -217,7 +229,23 @@ public:
     
     // this is here to surpress an "unused variable compiler warning"
     // you can remove it when you start writing your answer
-    cur_state == cur_state;
+    pos = cur_state.pose.pose.position;
+    x <<  pos.x, pos.y, pos.z;
+
+    vel = cur_state.twist.twist.linear;
+    v << vel.x, vel.y, vel.z;
+
+    quat = cur_state.pose.pose.orientation;
+    Eigen::Quaterniond qe;
+    q = tf2::fromMatrix(quat, qe);
+    R = qe.toRotationMatrix
+
+    rot = tf2::;
+
+    omega_world = cur_state.twist.twist.angular;
+    omega = ;
+
+
 
     //
     // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
