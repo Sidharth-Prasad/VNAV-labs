@@ -263,6 +263,8 @@ public:
     // 5.1 Compute position and velocity errors. Objective: fill in ex, ev.
     //  Hint: [1], eq. (6), (7)
     //
+    ex = x - xd;
+    ev = v - vd;
 
     // 5.2 Compute the Rd matrix.
     //
@@ -280,6 +282,16 @@ public:
     //    - remember to normalize your axes!
     //
     // Build b3d vector
+    Eigen::Vector3d b1d;
+    Eigen::Vector3d b2d;
+    Eigen::Vector3d b3d;
+
+    b3d = (-kx*ex - kv*ev - m*-g*e3 + m*ad)/((-kx*ex - kv*ev - m*-g*e3 + m*ad).norm());
+    b2d = b3d.cross(b1d)/b3d.cross(b1d).norm();
+    b1d = b2d.cross(b3d); //how do we actually calculate this?
+
+    Eigen::Matrix Rd;
+    Rd << b1d, b2d, b3d;
 
     //
     // 5.3 Compute the orientation error (er) and the rotation-rate error
@@ -292,6 +304,8 @@ public:
     //          requires numerical differentiation of Rd and it has negligible
     //          effects on the closed-loop dynamics.
     //
+    er = 0.5*Vee((Rd.transpose()*Rd - Rd.transpose()*Rd));
+    eomega = omega - Rd.transpose()*Rd*omega_d;
 
     //
     // 5.4 Compute the desired wrench (force + torques) to control the UAV.
@@ -309,6 +323,8 @@ public:
     //      derivative as they are of the second order and have negligible
     //      effects on the closed-loop dynamics.
     //
+    f = -(-kx*ex - kv*ev - m*-g*e3 +m*ad).dot(R*e3)
+    M = -(-kr*er - komeaga*eomega + omega.cross(J*omega)) //can ignore the rest of the terms
 
     // 5.5 Recover the rotor speeds from the wrench computed above
     //
@@ -334,7 +350,7 @@ public:
     //       real life, where propellers are aerodynamically optimized to spin
     //       in one direction!
     //
-
+    
     //
     // 5.6 Populate and publish the control message
     //
