@@ -241,9 +241,11 @@ public:
     R = qe.toRotationMatrix
 
     rot = tf2::;
-
-    omega_world = cur_state.twist.twist.angular;
-    omega = ;
+    
+    omega_msg = cur_state.twist.twist.angular;
+    Eigen::Vector3d omega_world
+    omega_world = tf2::fromMsg(omega_msg, omega_world);
+    omega = R.transpose() * omega_world;
 
 
 
@@ -343,21 +345,28 @@ public:
     //       between b1 and b2). To resolve this, check out equation 6.9 in the
     //       lecture notes!
     //
-    //     - The thrust forces are **in absolute value** proportional to the
+    //     - The thrust tforces are **in absolute value** proportional to the
     //       square of the propeller speeds. Negative propeller speeds -
     //       although uncommon - should be a possible outcome of the controller
-    //       when appropriate. Note that this is the case in unity but not in
+    //       when appropriate. Note that this is he case in unity but not in
     //       real life, where propellers are aerodynamically optimized to spin
     //       in one direction!
     //
-    
+    fM << f, M;
+    w = F2W.inverse() * fM;
+
+    signed_sqrt
+    //TODO: signed_sqrt the w rotor speeds and pass
+
     //
     // 5.6 Populate and publish the control message
     //
     // Hint: do not forget that the propeller speeds are signed (maybe you want
     // to use signed_sqrt function).
     //
-
+    auto message = mav_msgs::msg::Actuators();
+    message.angular_velocities = w;
+    speed_cmd_->publish(message);
     //
     // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
     //           end part 5, congrats! Start tuning your gains (part 6)
