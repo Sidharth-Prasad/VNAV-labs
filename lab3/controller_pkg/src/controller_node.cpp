@@ -133,12 +133,12 @@ public:
     // ~~~~ begin solution
     
     desired_state_ = create_subscription<trajectory_msgs::msg::MultiDOFJointTrajectoryPoint>(
-        "desired_state", 10, std::bind(&ControllerNode::onDesiredState, this, std::placeholders_1));
+        "desired_state", 10, std::bind(&ControllerNode::onDesiredState, this, std::placeholders::_1));
     
     current_state_ = create_subscription<nav_msgs::msg::Odometry>(
-          "current_state", 10, std::bind(&ControllerNode::onCurrentState, this, std::placeholders_1));
+          "current_state", 10, std::bind(&ControllerNode::onCurrentState, this, std::placeholders::_1));
     
-    timer_ = create_timer(this, get_clock(), rclcpp:Duration::from_seconds(1.0/hz), std:: bind(&ControllerNode:controlLoop, this));
+    timer_ = create_timer(this, get_clock(), rclcpp::Duration::from_seconds(1.0/hz), std::bind(&ControllerNode::controlLoop, this));
 
     speed_cmd_ = create_publisher<mav_msgs::msg::Actuators>("rotor_speed_cmds", 10);
     
@@ -182,21 +182,19 @@ public:
     // Hint: use "v << vx, vy, vz;" to fill in a vector with Eigen.
     //
     //xd = des_state.transforms.
-    double xx, xy, xz, vx, vy, vz, ax, ay, az;
-
-    xx = des_state.transforms[0].translation;
-    xy = des_state.transforms[1].translation;
-    xz = des_state.transforms[2].translation;
+    const auto xx = des_state.transforms[0].translation.x;
+    const auto xy = des_state.transforms[0].translation.y;
+    const auto xz = des_state.transforms[0].translation.z;
     xd << xx, xy, xz;
     
-    vx = des_state.velocities[0].linear;
-    vy = des_state.velocities[1].linear;
-    vz = des_state.velocities[2].linear;
+    const auto vx = des_state.velocities[0].linear.x;
+    const auto vy = des_state.velocities[0].linear.y;
+    const auto vz = des_state.velocities[0].linear.z;
     vd << vx, vy, vz;
       
-    ax = des_state.acceleration[0].linear;
-    ay = des_state.acceleration[1].linear;
-    az = des_state.acceleration[2].linear;
+    const auto ax = des_state.accelerations[0].linear.x;
+    const auto ay = des_state.accelerations[0].linear.y;
+    const auto az = des_state.accelerations[0].linear.z;
     ad << ax, ay, az;
     
     //v << vx, vy, vz;
@@ -249,7 +247,7 @@ public:
     R = qe.toRotationMatrix();
     
     const auto omega_msg = cur_state.twist.twist.angular;
-    Eigen::Vector3d omega_world
+    Eigen::Vector3d omega_world;
     tf2::fromMsg(omega_msg, omega_world);
     omega = R.transpose() * omega_world;
 
@@ -335,7 +333,7 @@ public:
     Eigen::Vector3d M;
 
     f = -(-kx*ex - kv*ev - m*-g*e3 +m*ad).dot(R*e3);
-    M = -(-kr*er - komeaga*eomega + omega.cross(J*omega)); //can ignore the rest of the terms
+    M = -(-kr*er - komega*eomega + omega.cross(J*omega)); //can ignore the rest of the terms
 
     // 5.5 Recover the rotor speeds from the wrench computed above
     //
@@ -366,12 +364,12 @@ public:
     fM << f, M;
     w = F2W.inverse() * fM;
 
-    mav_msgs::msg::Actuators rotor_speed_msg
-    rotor_speed_msg.angular_velocities.resize(4)
+    mav_msgs::msg::Actuators rotor_speed_msg;
+    rotor_speed_msg.angular_velocities.resize(4);
     for (int i = 0; i < 4; i++){
-      rotor_speed_msg.angular_velocities[i] = signed_sqrt(w)
+      rotor_speed_msg.angular_velocities[i] = signed_sqrt(w[i]);
     }
-    speed_cmd_->publish(rotor_speed_msg)
+    speed_cmd_->publish(rotor_speed_msg);
       
     //TODO: signed_sqrt the w rotor speeds and pass
 
