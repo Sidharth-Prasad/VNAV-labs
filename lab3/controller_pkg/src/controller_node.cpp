@@ -139,6 +139,7 @@ public:
           "current_state", 10, std::bind(&ControllerNode::onCurrentState, this, std::placeholders::_1));
     
     timer_ = create_timer(this, get_clock(), rclcpp::Duration::from_seconds(1.0/hz), std::bind(&ControllerNode::controlLoop, this));
+    timer_->reset();
 
     rotor_speed_cmds_ = create_publisher<mav_msgs::msg::Actuators>("rotor_speed_cmds", 10);
     
