@@ -61,8 +61,8 @@ class ControllerNode : public rclcpp::Node {
 
   rclcpp::Publisher<mav_msgs::msg::Actuators>::SharedPtr speed_cmd_;
 
-  rclcpp::Subscription<trajectory_msgs::msg::MultiDOFJointTrajectoryPoint>::SharedPtr desired_state_
-  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr current_state_
+  rclcpp::Subscription<trajectory_msgs::msg::MultiDOFJointTrajectoryPoint>::SharedPtr desired_state_;
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr current_state_;
 
   // ~~~~ end solution
   // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
@@ -132,13 +132,15 @@ public:
     //
     // ~~~~ begin solution
     
-    desired_state_ = this->create_subscription<trajectory_msgs::msg::MultiDOFJointTrajectoryPoint>(
-        "desired_state", 10, std::bind(&ControllerNode::onDesiredState, this, _1));
+    desired_state_ = create_subscription<trajectory_msgs::msg::MultiDOFJointTrajectoryPoint>(
+        "desired_state", 10, std::bind(&ControllerNode::onDesiredState, this, std::placeholders_1));
     
-    current_state_ = this->create_subscription<nav_msgs::msg::Odometry>(
-          "current_state", 10, std::bind(&ControllerNode::onCurrentState, this, _1));
+    current_state_ = create_subscription<nav_msgs::msg::Odometry>(
+          "current_state", 10, std::bind(&ControllerNode::onCurrentState, this, std::placeholders_1));
     
-    timer_ = this->create_wall_timer(1/hz, std::bind(&ControllerNode::controlLoop(), this));
+    timer_ = create_timer(this, get_clock(), rclcpp:Duration::from_seconds(1.0/hz), std:: bind(&ControllerNode:controlLoop, this));
+
+    speed_cmd_ = create_publisher<mav_msgs::msg::Actuators>("rotor_speed_cmds", 10);
     
     //TODO: Figure out how to start with reset()
       
@@ -180,6 +182,8 @@ public:
     // Hint: use "v << vx, vy, vz;" to fill in a vector with Eigen.
     //
     //xd = des_state.transforms.
+    double xx, xy, xz, vx, vy, vz, ax, ay, az;
+
     xx = des_state.transforms[0].translation;
     xy = des_state.transforms[1].translation;
     xz = des_state.transforms[2].translation;
@@ -207,7 +211,8 @@ public:
     //  Hints:
     //    - look into the functions tf2::getYaw(...) and tf2::fromMsg
     //
-    transform = tf2::fromMsg(des_state.transforms.rotation);
+    tf2::Quaternion transform;
+    tf2::fromMsg(des_state.transforms[0].rotation, transform);
     yawd = tf2::getYaw(transform);
     //
     // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
@@ -229,22 +234,23 @@ public:
     
     // this is here to surpress an "unused variable compiler warning"
     // you can remove it when you start writing your answer
-    pos = cur_state.pose.pose.position;
+    
+
+    const auto pos = cur_state.pose.pose.position;
     x <<  pos.x, pos.y, pos.z;
 
-    vel = cur_state.twist.twist.linear;
+    const auto vel = cur_state.twist.twist.linear;
     v << vel.x, vel.y, vel.z;
 
-    quat = cur_state.pose.pose.orientation;
+    const auto quat = cur_state.pose.pose.orientation;
     Eigen::Quaterniond qe;
-    q = tf2::fromMatrix(quat, qe);
-    R = qe.toRotationMatrix
-
-    rot = tf2::;
+    tf2::Quaternion q;
+    tf2::fromMsg(quat, qe);
+    R = qe.toRotationMatrix();
     
-    omega_msg = cur_state.twist.twist.angular;
+    const auto omega_msg = cur_state.twist.twist.angular;
     Eigen::Vector3d omega_world
-    omega_world = tf2::fromMsg(omega_msg, omega_world);
+    tf2::fromMsg(omega_msg, omega_world);
     omega = R.transpose() * omega_world;
 
 
@@ -292,7 +298,7 @@ public:
     b2d = b3d.cross(b1d)/b3d.cross(b1d).norm();
     b1d = b2d.cross(b3d); //how do we actually calculate this?
 
-    Eigen::Matrix Rd;
+    Eigen::Matrix3d Rd;
     Rd << b1d, b2d, b3d;
 
     //
@@ -307,7 +313,7 @@ public:
     //          effects on the closed-loop dynamics.
     //
     er = 0.5*Vee((Rd.transpose()*Rd - Rd.transpose()*Rd));
-    eomega = omega - Rd.transpose()*Rd*omega_d;
+    eomega = omega;
 
     //
     // 5.4 Compute the desired wrench (force + torques) to control the UAV.
@@ -325,8 +331,11 @@ public:
     //      derivative as they are of the second order and have negligible
     //      effects on the closed-loop dynamics.
     //
-    f = -(-kx*ex - kv*ev - m*-g*e3 +m*ad).dot(R*e3)
-    M = -(-kr*er - komeaga*eomega + omega.cross(J*omega)) //can ignore the rest of the terms
+    double f;
+    Eigen::Vector3d M;
+
+    f = -(-kx*ex - kv*ev - m*-g*e3 +m*ad).dot(R*e3);
+    M = -(-kr*er - komeaga*eomega + omega.cross(J*omega)); //can ignore the rest of the terms
 
     // 5.5 Recover the rotor speeds from the wrench computed above
     //
@@ -352,10 +361,18 @@ public:
     //       real life, where propellers are aerodynamically optimized to spin
     //       in one direction!
     //
+    Eigen::Vector4d fM, w;
+
     fM << f, M;
     w = F2W.inverse() * fM;
 
-    signed_sqrt(w)
+    mav_msgs::msg::Actuators rotor_speed_msg
+    rotor_speed_msg.angular_velocities.resize(4)
+    for (int i = 0; i < 4; i++){
+      rotor_speed_msg.angular_velocities[i] = signed_sqrt(w)
+    }
+    speed_cmd_->publish(rotor_speed_msg)
+      
     //TODO: signed_sqrt the w rotor speeds and pass
 
     //
@@ -364,9 +381,7 @@ public:
     // Hint: do not forget that the propeller speeds are signed (maybe you want
     // to use signed_sqrt function).
     //
-    auto message = mav_msgs::msg::Actuators();
-    message.angular_velocities = w;
-    speed_cmd_->publish(message);
+  
     //
     // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
     //           end part 5, congrats! Start tuning your gains (part 6)
