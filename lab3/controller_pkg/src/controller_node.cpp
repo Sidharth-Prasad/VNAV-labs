@@ -59,7 +59,7 @@ class ControllerNode : public rclcpp::Node {
   //Node class calls create_subscription as opposed to constructor to creates subscription 
   rclcpp::TimerBase::SharedPtr timer_;
 
-  rclcpp::Publisher<mav_msgs::msg::Actuators>::SharedPtr speed_cmd_;
+  rclcpp::Publisher<mav_msgs::msg::Actuators>::SharedPtr rotor_speed_cmds_;
 
   rclcpp::Subscription<trajectory_msgs::msg::MultiDOFJointTrajectoryPoint>::SharedPtr desired_state_;
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr current_state_;
@@ -140,7 +140,7 @@ public:
     
     timer_ = create_timer(this, get_clock(), rclcpp::Duration::from_seconds(1.0/hz), std::bind(&ControllerNode::controlLoop, this));
 
-    speed_cmd_ = create_publisher<mav_msgs::msg::Actuators>("rotor_speed_cmds", 10);
+    rotor_speed_cmds_ = create_publisher<mav_msgs::msg::Actuators>("rotor_speed_cmds", 10);
     
     //TODO: Figure out how to start with reset()
       
@@ -369,7 +369,7 @@ public:
     for (int i = 0; i < 4; i++){
       rotor_speed_msg.angular_velocities[i] = signed_sqrt(w[i]);
     }
-    speed_cmd_->publish(rotor_speed_msg);
+    rotor_speed_cmds_->publish(rotor_speed_msg);
       
     //TODO: signed_sqrt the w rotor speeds and pass
 
