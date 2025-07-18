@@ -355,7 +355,7 @@ public:
     fM << f, M;
     w = F2W.inverse() * fM;
 
-    signed_sqrt
+    signed_sqrt(w)
     //TODO: signed_sqrt the w rotor speeds and pass
 
     //
