@@ -289,15 +289,20 @@ public:
     //    - remember to normalize your axes!
     //
     // Build b3d vector
+
     Eigen::Vector3d b1d;
     Eigen::Vector3d b2d;
     Eigen::Vector3d b3d;
+    Eigen::Vector3d b1d_tilde;
+
+    b1d_tilde << std::cos(yawd), std::sin(yawd), 0;
 
     b3d = (-kx*ex - kv*ev - m*-g*e3 + m*ad)/((-kx*ex - kv*ev - m*-g*e3 + m*ad).norm());
-    b2d = b3d.cross(b1d)/b3d.cross(b1d).norm();
-    b1d = b2d.cross(b3d); //how do we actually calculate this?
+    b2d = b3d.cross(b1d_tilde)/b3d.cross(b1d_tilde).norm();
+    b1d = b2d.cross(b3d); 
 
     Eigen::Matrix3d Rd;
+
     Rd << b1d, b2d, b3d;
 
     //
@@ -311,7 +316,7 @@ public:
     //          requires numerical differentiation of Rd and it has negligible
     //          effects on the closed-loop dynamics.
     //
-    er = 0.5*Vee((Rd.transpose()*Rd - Rd.transpose()*Rd));
+    er = 0.5*Vee((Rd.transpose()*R - R.transpose()*Rd));
     eomega = omega;
 
     //
@@ -333,8 +338,8 @@ public:
     double f;
     Eigen::Vector3d M;
 
-    f = -(-kx*ex - kv*ev - m*-g*e3 +m*ad).dot(R*e3);
-    M = -(-kr*er - komega*eomega + omega.cross(J*omega)); //can ignore the rest of the terms
+    f = (-kx*ex - kv*ev - m*-g*e3 +m*ad).dot(R*e3);
+    M = (-kr*er - komega*eomega + omega.cross(J*omega)); //can ignore the rest of the terms
 
     // 5.5 Recover the rotor speeds from the wrench computed above
     //
